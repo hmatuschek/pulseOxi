@@ -44,6 +44,7 @@ the newest features and options.
  * Default if not specified: 12 MHz
  */
 
+
 /* ----------------------- Optional Hardware Config ------------------------ */
 
 //#define USB_CFG_PULLUP_IOPORTNAME   D
@@ -129,7 +130,7 @@ the newest features and options.
  * own Vendor ID, define it here. Otherwise you use obdev's free shared
  * VID/PID pair. Be sure to read USBID-License.txt for rules!
  */
-#define USB_CFG_DEVICE_ID   0xdc, 0x05  /* 1500 in dec, obdev's free PID */
+#define USB_CFG_DEVICE_ID   0xde, 0x05  /* 1500 in dec, obdev's free PID */
 /* This is the ID of the product, low byte first. It is interpreted in the
  * scope of the vendor ID. If you have registered your own VID with usb.org
  * or if you have licensed a PID from somebody else, define it here. Otherwise
@@ -174,7 +175,7 @@ the newest features and options.
 /* See USB specification if you want to conform to an existing device class or
  * protocol.
  */
-#define USB_CFG_HID_REPORT_DESCRIPTOR_LENGTH    0   /* total length of report descriptor */
+//#define USB_CFG_HID_REPORT_DESCRIPTOR_LENGTH    0   /* total length of report descriptor */
 /* Define this to the length of the HID report descriptor, if you implement
  * an HID device. Otherwise don't define it or define it to 0.
  */

@@ -14,36 +14,46 @@ Pulse::Pulse(QObject *parent)
   libusb_init(&_usbctx);
 
   /* compute VID/PID from usbconfig.h so that there is a central source of information */
-  vid = rawVid[1] * 256 + rawVid[0];
-  pid = rawPid[1] * 256 + rawPid[0];
+  vid = int(rawVid[1]) * 256 + rawVid[0];
+  pid = int(rawPid[1]) * 256 + rawPid[0];
 
+  //_dumpDevices();
+
+  // Get device list
   libusb_device **devices;
   libusb_get_device_list(_usbctx, &devices);
 
+  // Try to open device (identified by vendor & device id)
   _device = libusb_open_device_with_vid_pid(_usbctx, vid, pid);
   if (0 == _device) {
     qDebug() << "Cannot open device for vid=" << vid << ", pid=" << pid;
     return;
   }
 
+  // Free list (not needed anymore)
   libusb_free_device_list(devices, 1);
 
   if (0 > libusb_claim_interface(_device, 0)) {
+    qDebug() << "Cannot claim interface.";
     return;
   }
 
+  // done.
   _connected = true;
 }
 
 
 Pulse::~Pulse() {
   if (_device) {
-    if (0 != libusb_release_interface(_device, 0))
-      return;
+    // If there is a device -> free interface
+    libusb_release_interface(_device, 0);
+    // destroy device
     libusb_close(_device);
   }
+  // If there is a USB context -> free
   if (_usbctx)
     libusb_exit(_usbctx);
+  // done.
   _connected = false;
 }
 
@@ -78,6 +88,7 @@ Pulse::readMeasurement(double &value) {
     qDebug() << "Got invalid or incomplete response.";
     return false;
   }
+  qDebug() << "Got " << msg.lower << ", " << msg.upper;
   value = (double(msg.upper)-msg.lower)/(double(msg.upper)+msg.lower);
   return true;
 }
@@ -92,7 +103,8 @@ Pulse::_dumpDevices() {
     if (0 > libusb_get_device_descriptor(devices[i], &desc))
       continue;
     qDebug() << "Found class" << (int) desc.bDeviceClass
-             << " device" <<  desc.idProduct << "from" << desc.idVendor
+             << " device" <<  QString("%1").arg(desc.idProduct, 0, 16)
+             << "from" << QString("%1").arg(desc.idVendor,0,16)
              << " with" << (int)desc.bNumConfigurations << "configs: ";
     libusb_config_descriptor *config;
     libusb_get_config_descriptor(devices[i], 0, &config);

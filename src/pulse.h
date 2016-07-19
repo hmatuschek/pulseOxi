@@ -4,6 +4,8 @@
 #include <QObject>
 #include <libusb.h>
 
+
+/** Implements the communication with the device. */
 class Pulse : public QObject
 {
   Q_OBJECT
@@ -25,5 +27,6 @@ protected:
   libusb_device_handle  *_device;
   bool _connected;
 };
+
 
 #endif // PULSE_H
