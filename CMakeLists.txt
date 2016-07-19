@@ -1,23 +1,26 @@
 cmake_minimum_required(VERSION 2.8.8)
-project(pulse)
+project(pulse C CXX ASM)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 include(InstallHeadersWithDirectory)
 
 find_package(Qt5Core REQUIRED)
 find_package(Qt5Widgets REQUIRED)
-find_package(Qt5SerialPort REQUIRED)
+find_package(Qt5PrintSupport REQUIRED)
+find_package(libusb REQUIRED)
+
+message(STATUS "Found libusb-1.0: ${LIBUSB_INCLUDE_DIRS} ${LIBUSB_LIBRARIES}")
 
 ADD_DEFINITIONS(${Qt5Widgets_DEFINITIONS})
 INCLUDE_DIRECTORIES(${Qt5Core_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${Qt5Declarative_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${Qt5Widgets_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${Qt5SerialPort_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${Qt5PrintSupport_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${LIBUSB_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR})
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src)
-
 LINK_DIRECTORIES(${PROJECT_BINARY_DIR}/src)
-set(LIBS ${Qt5Core_LIBRARIES} ${Qt5Widgets_LIBRARIES} ${Qt5SerialPort_LIBRARIES})
+
+set(LIBS ${Qt5Core_LIBRARIES} ${Qt5Widgets_LIBRARIES} ${Qt5PrintSupport_LIBRARIES} ${LIBUSB_LIBRARIES})
 
 # Set compiler flags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Widgets_EXECUTABLE_COMPILE_FLAGS} -Wall")
@@ -27,6 +30,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -ggdb")
 
 # application sources...
 add_subdirectory(src)
+add_subdirectory(firmware)
 
 # Source distribution packages:
 set(CPACK_PACKAGE_VERSION_MAJOR "0")

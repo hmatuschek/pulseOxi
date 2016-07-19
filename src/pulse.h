@@ -2,19 +2,28 @@
 #define PULSE_H
 
 #include <QObject>
-#include <QSerialPort>
+#include <libusb.h>
 
 class Pulse : public QObject
 {
   Q_OBJECT
 
 public:
-  explicit Pulse(const QString &portname, QObject *parent = 0);
+  explicit Pulse(QObject *parent = 0);
+  ~Pulse();
 
   bool isConnected() const;
 
+  bool startMeasurement();
+  bool readMeasurement(double &value);
+
 protected:
-  QSerialPort _port;
+  void _dumpDevices();
+
+protected:
+  libusb_context        *_usbctx;
+  libusb_device_handle  *_device;
+  bool _connected;
 };
 
 #endif // PULSE_H

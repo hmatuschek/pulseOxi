@@ -1,5 +1,4 @@
 #include "portdialog.h"
-#include <QSerialPortInfo>
 #include <QVBoxLayout>
 #include <QDialog>
 #include <QLabel>

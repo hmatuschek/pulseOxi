@@ -7,16 +7,8 @@
 int main(int argc, char *argv[])
 {
   QApplication app(argc, argv);
-  QString portname;
 
-  // Get portname
-  PortDialog dialog;
-  if (QDialog::Accepted != dialog.exec()) {
-    return 0;
-  }
-  portname = dialog.systemLocation();
-
-  Pulse pulse(portname);
+  Pulse pulse(0);
   MainWindow mainwin(pulse);
   mainwin.show();
 
