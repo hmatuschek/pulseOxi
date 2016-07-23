@@ -13,14 +13,16 @@ public:
   explicit MainWindow(Pulse &pulse, QWidget *parent = 0);
 
 protected slots:
+  void _onConnectionLoss();
   void _onUpdate();
 
 protected:
   Pulse &_pulse;
-  QTimer _timer;
-  QDateTime _startTime;
   QCustomPlot *_plot;
-  QCPGraph *_graph;
+  QCPGraph *_relGraph;
+  QCPGraph *_relMeanGraph;
+  QCPGraph *_pulseGraph;
+  QCPGraph *_pulseMeanGraph;
 
 };
 

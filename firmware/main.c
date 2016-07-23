@@ -20,7 +20,7 @@
 
 #define PULSE_CONCAT(a,b)   a ## b
 #define DDR_REG_NAME(port)  PULSE_CONCAT(DDR, port)
-#define PORT_REG_NAME(port)  PULSE_CONCAT(DDR, port)
+#define PORT_REG_NAME(port)  PULSE_CONCAT(PORT, port)
 
 #define LED1_DDR_REG        DDR_REG_NAME(PULSE_LED1_PORT)
 #define LED1_PORT_REG       PORT_REG_NAME(PULSE_LED1_PORT)
@@ -32,18 +32,22 @@
 #define ADC_PORT_REG        PORT_REG_NAME(PULSE_ADC_PORT)
 #define ADC_MUX             (PULSE_ADC_CHANNEL & 0x0f)
 
+#define NOP                 asm volatile ("nop")
 
 // ==============================================================================
 // Globals
 // ------------------------------------------------------------------------------
 
-volatile static Message usb_reply;
+static Message usb_reply;
+static uint16_t currentSum = 0;
+static uint8_t  sampleCount = 0;
 
 typedef enum {
   MODE_IDLE,
   MODE_START,
   MODE_LED1,
   MODE_LED2,
+  MODE_BASE,
   MODE_READY
 } Mode;
 
@@ -58,6 +62,7 @@ usbMsgLen_t usbFunctionSetup(uchar data[8]) {
   usbRequest_t    *rq = (void *)data;
   // Dispatch by request type
   if ((MODE_READY == mode) && (rq->bRequest == PULSE_CMD_GET)) {
+    // If there is some data and CMB is GET
     usbMsgLen_t len = sizeof(usb_reply);
     if (len > rq->wLength.word)
       len = rq->wLength.word;
@@ -65,18 +70,19 @@ usbMsgLen_t usbFunctionSetup(uchar data[8]) {
     mode = MODE_IDLE;
     return len;
   } else if ((MODE_IDLE == mode) && (rq->bRequest == PULSE_CMD_START)) {
+    // If idle and CMD is START
     mode = MODE_START;
   }
   return 0;
 }
 
 
-/*---------------------------------------------------------------------------*/
-/* usbConf                                                              */
-/*---------------------------------------------------------------------------*/
+/* ********************************************************************************************* *
+ * Hardware setup
+ * ********************************************************************************************* */
 static void
-usbHardwareInit(void)
-{
+hardwareInit(void) {
+  // Init USB interface
   uchar i, j;
 
   /* deactivate pull-ups on USB lines */
@@ -91,13 +97,6 @@ usbHardwareInit(void)
 
   /*  remove USB reset condition */
   USBDDR &= ~ ( (1 << USB_CFG_DMINUS_BIT) | (1 << USB_CFG_DPLUS_BIT) );
-}
-
-
-static void
-hardwareInit(void) {
-  // Init USB interface
-  usbHardwareInit();
 
   // Set LED output
   LED1_DDR_REG |= (1<<PULSE_LED1_PIN);
@@ -116,47 +115,22 @@ hardwareInit(void) {
   // enable ADC
   ADCSRA |= (1<<ADEN);
 
-  // Config timer0, prescaler 64 -> approx 1kHz
-  TCCR0B |= (0<<CS02) | (1<<CS01) | (1<<CS00) ;
-  // enable overflow interrupt
-  TIMSK |= (1<<TOIE0);
-
   // init state machine in "idle"
   mode = MODE_IDLE;
 }
 
 
-// ==============================================================================
-// - main
-// ------------------------------------------------------------------------------
-int
-main(void)
-{
-  // Init hardware
-  hardwareInit();
-  usbInit();
-  // Enable interrupts
-	sei();
-
-	for(;;) {
-    // handle USB stuff
-		usbPoll();
-	}
-
-  return 0;
-}
-
-
-static uint16_t currentSum = 0;
-static uint8_t  sampleCount = 0;
-
-ISR(TIMER0_OVF_vect) {
+/* ********************************************************************************************* *
+ * Measurement loop
+ * ********************************************************************************************* */
+static void
+adcPoll() {
   // Dispatch by mode
   if (MODE_START == mode) {
-    // enable LED1
+    // enable LED1 & disable LED2
     LED1_PORT_REG |= (1<<PULSE_LED1_PIN);
-    // disable LED2
     LED2_PORT_REG &= ~(1<<PULSE_LED2_PIN);
+    NOP;
     // start converion
     ADCSRA |= (1<<ADSC);
     // update mode
@@ -176,10 +150,10 @@ ISR(TIMER0_OVF_vect) {
       usb_reply.lower = currentSum;
       // reset counter
       currentSum = 0; sampleCount = 0;
-      // disable LED1
+      // disable LED1 & enable LED2
       LED1_PORT_REG &= ~(1<<PULSE_LED1_PIN);
-      // enable LED2
       LED2_PORT_REG |= (1<<PULSE_LED2_PIN);
+      NOP;
       // start converion
       ADCSRA |= (1<<ADSC);
       // update mode
@@ -197,11 +171,53 @@ ISR(TIMER0_OVF_vect) {
       usb_reply.upper = currentSum;
       // reset counter
       currentSum = 0; sampleCount = 0;
-      // disable LED1 & 2
+      // disable LED 1 & 2
       LED1_PORT_REG &= ~(1<<PULSE_LED1_PIN);
       LED2_PORT_REG &= ~(1<<PULSE_LED2_PIN);
+      NOP;
       // update mode, done.
+      mode = MODE_BASE;
+      // start converion
+      ADCSRA |= (1<<ADSC);
+    }
+  } else if ((MODE_BASE == mode) && (0 == (ADCSRA & (1<<ADSC)))) {
+    // add result to sum
+    currentSum += ADC;
+    sampleCount++;
+    if (64 > sampleCount) {
+      // start converion
+      ADCSRA |= (1<<ADSC);
+    } else {
+      // store 16 bit value
+      usb_reply.base = currentSum;
+      // reset counter
+      currentSum = 0; sampleCount = 0;
+      // update mode
       mode = MODE_READY;
     }
   }
+}
+
+
+/* ********************************************************************************************* *
+ * main()
+ * ********************************************************************************************* */
+int
+main(void)
+{
+  // Init hardware
+  hardwareInit();
+  usbInit();
+
+  // Enable interrupts
+	sei();
+
+	for(;;) {
+    // handle USB stuff
+    usbPoll();
+    // handle measurement stuff
+    adcPoll();
+	}
+
+  return 0;
 }

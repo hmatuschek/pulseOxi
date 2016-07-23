@@ -7,6 +7,7 @@ typedef enum {
 } PulseCommand;
 
 typedef struct __attribute__ ((packed)) {
+  uint16_t base;
   uint16_t upper;
   uint16_t lower;
 } Message;
