@@ -21,6 +21,7 @@ MainWindow::MainWindow(Pulse &pulse, QWidget *parent)
   _start->setIcon(QIcon("://icons/play.png"));
   _start->setCheckable(true);
   _start->setChecked(false);
+  _start->setToolTip(tr("Start/stop measurment."));
   toolbar->addWidget(_start);
 
   _log = new QToolButton();
@@ -28,6 +29,7 @@ MainWindow::MainWindow(Pulse &pulse, QWidget *parent)
   _log->setIcon(QIcon("://icons/log.png"));
   _log->setCheckable(true);
   _log->setChecked(false);
+  _log->setToolTip(tr("Start/stop logging measurements to a file."));
   toolbar->addWidget(_log);
   toolbar->addSeparator();
 
@@ -36,14 +38,19 @@ MainWindow::MainWindow(Pulse &pulse, QWidget *parent)
   _soundButton->setIcon(QIcon("://icons/soundon.png"));
   _soundButton->setCheckable(true);
   _soundButton->setChecked(false);
+  _soundButton->setToolTip(tr("Enable/disable pulse beep"));
   toolbar->addWidget(_soundButton);
 
-  toolbar->addAction(QIcon("://icons/config.png"), tr("Settings"), this, SLOT(_onSettings()));
+  QAction *settings = toolbar->addAction(
+        QIcon("://icons/config.png"), tr("Settings"), this, SLOT(_onSettings()));
+  settings->setToolTip(tr("Settings"));
 
   QWidget* empty = new QWidget();
   empty->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   toolbar->addWidget(empty);
-  toolbar->addAction(QIcon("://icons/quit.png"), tr("Quit"), this, SLOT(close()));
+  QAction *quit = toolbar->addAction(
+        QIcon("://icons/quit.png"), tr("Quit"), this, SLOT(close()));
+  quit->setToolTip(tr("Quit the application."));
 
   QColor color;
   _plot = new QCustomPlot(this);
