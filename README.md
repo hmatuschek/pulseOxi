@@ -9,7 +9,7 @@ The amount of light that gets detected, however, depends on many factors, includ
 
 For the [circuit](https://github.com/hmatuschek/pulseOxi/blob/master/hardware/pulse_scm.pdf), two LEDs are used as light sources. One red led (around 645nm) and one infra red (IR, 900nm) led. The intensity of the transmitted light is then measured using a photo diode. The current through this diode is then converted to a voltage using a operational amplifier (opamp). The voltage signal is then sampled using one of the analog/digital converters (ADCs) of the ATtiny45. By switching the LEDs on and off (also controlled by the ATtiny), the intensity difference can be computed, representing the relative oxidation level of the hemoglobin. For more details on how to construct a pulse-oximeter, consider the [AN4327 application node](http://www.nxp.com/files/32bit/doc/app_note/AN4327.pdf) by NXP. 
 
-<img align="middle" src="https://github.com/hmatuschek/pulseOxi/blob/master/hardware/pulse_scm.png" width="100%">
+<img align="middle" src="https://github.com/hmatuschek/pulseOxi/blob/master/hardware/pulse_scm.png" width="90%">
 
 Please note that the LEDs are driven directly by the digital outputs of the ATtiny. They are able to deliver (only) about 20-30mA. Hence choose the LEDs and their series resistors accordingly. The circuit above does not include the series resistors. They are connected directly to the LEDs at the clip. The single LEDs are driven by ATtiny in a H-bridge way. That is, one of the LED pins acts as a source and one as a sink. This allows to drive the LEDs with two wires only but does not allow for driving them both simultaneously. Hence the LEDs must be connected to the ATtiny like shown in the circuit below.
 
@@ -20,6 +20,7 @@ Please note that the LEDs are driven directly by the digital outputs of the ATti
 
 The client software provides a convenient [Qt5](https://qt.io) GUI application using [QCustomPlot](http://www.qcustomplot.com/) for potting and [libusb](http://libusb.info/) to interface the pulse oximeter hardware.
 
+<img align="middle" src="https://github.com/hmatuschek/pulseOxi/blob/master/doc/screen1.png" width="90%">
 
 The upper half shows the (approx.) SpO2 level (relative oxygen saturation, blue line) together with an estimate of the pulse rate in BPM (red line). The smaller bottom plot shows the pulse signal obtained for the IR channel (blue line) and red channel (red line) from which the pulse rate gets estimated. With the current implementation, the baseline and AC signal (deviance from the baseline) as well as the amplitude of the AC signal are obtained using sinc-convolution filters. This implies a short delay (about 5s) between the actual measurement and the display.
 
