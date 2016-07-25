@@ -9,7 +9,9 @@ int main(int argc, char *argv[])
   QApplication app(argc, argv);
 
   Pulse pulse(0);
-  MainWindow mainwin(pulse);
+  Settings settings;
+
+  MainWindow mainwin(pulse, settings);
   mainwin.show();
 
   app.exec();

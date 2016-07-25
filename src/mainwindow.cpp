@@ -4,18 +4,20 @@
 #include <QFileDialog>
 #include <QToolButton>
 #include <QIcon>
+#include "settingsdialog.hh"
+#include "aboutdialog.hh"
 
-#define DURATION 5.0
 
-
-MainWindow::MainWindow(Pulse &pulse, QWidget *parent)
-  : QMainWindow(parent), _pulse(pulse), _plot(0), _beep()
+MainWindow::MainWindow(Pulse &pulse, Settings &settings, QWidget *parent)
+  : QMainWindow(parent), _pulse(pulse), _settings(settings), _plot(0), _beep()
 {
   //setWindowFlags(windowFlags() | Qt::CustomizeWindowHint | Qt::WindowStaysOnTopHint);
   setMinimumSize(800, 480);
   setWindowTitle(tr("Pulse"));
 
-  QToolBar *toolbar = addToolBar(tr("Toolbar"));
+  QToolBar *toolbar = new QToolBar(tr("Pulse"));
+  addToolBar(Qt::RightToolBarArea, toolbar);
+
   _start = new QToolButton();
   _start->setText(tr("Start"));
   _start->setIcon(QIcon("://icons/play.png"));
@@ -37,28 +39,34 @@ MainWindow::MainWindow(Pulse &pulse, QWidget *parent)
   _soundButton->setText(tr("Enable pulse beep"));
   _soundButton->setIcon(QIcon("://icons/soundon.png"));
   _soundButton->setCheckable(true);
-  _soundButton->setChecked(false);
+  _soundButton->setChecked(_settings.pulseBeepEnabled());
   _soundButton->setToolTip(tr("Enable/disable pulse beep"));
   toolbar->addWidget(_soundButton);
 
-  QAction *settings = toolbar->addAction(
+  QAction *settingsAct = toolbar->addAction(
         QIcon("://icons/config.png"), tr("Settings"), this, SLOT(_onSettings()));
-  settings->setToolTip(tr("Settings"));
+  settingsAct->setToolTip(tr("Settings"));
 
   QWidget* empty = new QWidget();
   empty->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   toolbar->addWidget(empty);
+
+  QAction *about = toolbar->addAction(
+        QIcon("://icons/about.png"), tr("About Pulse"), this, SLOT(_onAbout()));
+  about->setToolTip(tr("Shows about dialog."));
+
+  toolbar->addSeparator();
   QAction *quit = toolbar->addAction(
         QIcon("://icons/quit.png"), tr("Quit"), this, SLOT(close()));
   quit->setToolTip(tr("Quit the application."));
 
   QColor color;
   _plot = new QCustomPlot(this);
-  _plot->setInteraction(QCP::iRangeZoom, true);
-  _plot->setInteraction(QCP::iRangeDrag, true);
-  _plot->yAxis->setRange(60,100);
-  _plot->yAxis2->setRange(40,150);
-  _plot->xAxis->setRange(1-DURATION,1);
+  //_plot->setInteraction(QCP::iRangeZoom, true);
+  //_plot->setInteraction(QCP::iRangeDrag, true);
+  _plot->yAxis->setRange(_settings.minSpO2(), _settings.maxSpO2());
+  _plot->yAxis2->setRange(_settings.minPulse(), _settings.maxPulse());
+  _plot->xAxis->setRange(1-_settings.plotDuration(),1);
   _plot->yAxis->setTickLabelColor(Qt::blue);
   _plot->yAxis->setLabel(tr("SpO2 [%]"));
   _plot->yAxis2->setVisible(true);
@@ -72,9 +80,10 @@ MainWindow::MainWindow(Pulse &pulse, QWidget *parent)
   _pulseGraph->setPen(QColor(Qt::red));
 
   _pulsePlot = new QCustomPlot(this);
+  _pulsePlot->setVisible(_settings.pulsePlotVisible());
   _pulsePlot->yAxis->setLabel(tr("Pulse signal"));
   _pulsePlot->yAxis->setRange(-1, 1);
-  _pulsePlot->xAxis->setRange(0, 1);
+  _pulsePlot->xAxis->setRange(0, _settings.pulsePlotDuration());
   _irPulseGraph = _pulsePlot->addGraph();
   _irStdGraph   = _pulsePlot->addGraph();
   color = Qt::blue;
@@ -92,11 +101,14 @@ MainWindow::MainWindow(Pulse &pulse, QWidget *parent)
   QVBoxLayout *layout = new QVBoxLayout();
   layout->addWidget(_plot, 2);
   layout->addWidget(_pulsePlot, 1);
+  layout->setSpacing(0);
+  layout->setContentsMargins(0,0,0,0);
   panel->setLayout(layout);
   setCentralWidget(panel);
 
   _beep.setSource(QUrl::fromLocalFile("://sounds/beep1.wav"));
-  _beep.setMuted(true);
+  _beep.setMuted(! _settings.pulseBeepEnabled());
+  _beep.setVolume(_settings.pulseBeepVolume());
 
   connect(&_pulse, SIGNAL(connectionLost()), this, SLOT(_onConnectionLoss()));
   connect(&_pulse, SIGNAL(measurement()), this, SLOT(_onUpdate()));
@@ -109,30 +121,50 @@ MainWindow::MainWindow(Pulse &pulse, QWidget *parent)
 void
 MainWindow::_onUpdate() {
   double t  = _pulse.t();
-  double tMax = std::ceil(t);
-
   _spo2Graph->addData(t, _pulse.SpO2());
-  _spo2Graph->removeDataBefore(t-DURATION);
   _pulseGraph->addData(t, _pulse.pulse());
-  _pulseGraph->removeDataBefore(t-DURATION);
 
   _irPulseGraph->addData(t, _pulse.irPulse());
-  _irPulseGraph->removeDataBefore(t-1);
   _irPulseGraph->rescaleValueAxis(false,false);
   _irStdGraph->addData(t, _pulse.irStd());
-  _irStdGraph->removeDataBefore(t-1);
   _irStdGraph->rescaleValueAxis(true,false);
   _redPulseGraph->addData(t, _pulse.redPulse());
-  _redPulseGraph->removeDataBefore(t-1);
   _redPulseGraph->rescaleValueAxis(true,false);
   _redStdGraph->addData(t, _pulse.redStd());
-  _redStdGraph->removeDataBefore(t-1);
   _redStdGraph->rescaleValueAxis(true,false);
 
-  _plot->xAxis->setRange(tMax-DURATION, tMax);
-  _pulsePlot->xAxis->setRange(tMax-1, tMax);
+  _applySettings();
+}
+
+void
+MainWindow::_applySettings() {
+  double tMax = std::ceil(_pulse.t());
+  _spo2Graph->removeDataBefore(_pulse.t()-_settings.plotDuration());
+  _pulseGraph->removeDataBefore(_pulse.t()-_settings.plotDuration());
+  _irPulseGraph->removeDataBefore(_pulse.t()-_settings.pulsePlotDuration());
+  _irStdGraph->removeDataBefore(_pulse.t()-_settings.pulsePlotDuration());
+  _redPulseGraph->removeDataBefore(_pulse.t()-_settings.pulsePlotDuration());
+  _redStdGraph->removeDataBefore(_pulse.t()-_settings.pulsePlotDuration());
+
+  _plot->xAxis->setRange(tMax-_settings.plotDuration(), tMax);
+  _plot->yAxis->setRange(_settings.minSpO2(), _settings.maxSpO2());
+  _plot->yAxis2->setRange(_settings.minPulse(), _settings.maxPulse());
+  _pulsePlot->xAxis->setRange(tMax-_settings.pulsePlotDuration(), tMax);
+
+  _pulsePlot->setVisible(_settings.pulsePlotVisible());
   _plot->replot();
-  _pulsePlot->replot();
+  if (_settings.pulsePlotVisible()) {
+    _pulsePlot->replot();
+  }
+
+  if (_settings.pulseBeepEnabled()) {
+    _beep.setMuted(false);
+    _soundButton->setChecked(true);
+  } else {
+    _beep.setMuted(true);
+    _soundButton->setChecked(false);
+  }
+  _beep.setVolume(_settings.pulseBeepVolume());
 }
 
 void
@@ -180,12 +212,21 @@ MainWindow::_onLog(bool log) {
 
 void
 MainWindow::_onSoundToggled(bool on) {
-  _beep.setMuted(! on);
-  if (on)
+  _settings.setPulseBeepEnabled(on);
+  _beep.setMuted(! _settings.pulseBeepEnabled());
+  if (_settings.pulseBeepEnabled())
     _beep.play();
 }
 
 void
 MainWindow::_onSettings() {
-  // pass...
+  SettingsDialog dialog(_settings);
+  if (QDialog::Accepted == dialog.exec())
+    _applySettings();
+}
+
+void
+MainWindow::_onAbout() {
+  AboutDialog dialog;
+  dialog.exec();
 }

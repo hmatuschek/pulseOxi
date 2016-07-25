@@ -1,7 +1,7 @@
 set(pulse_SOURCES main.cpp
-    pulse.cpp mainwindow.cpp qcustomplot.cc)
+    pulse.cpp mainwindow.cpp qcustomplot.cc settings.cc settingsdialog.cc aboutdialog.cc)
 set(pulse_MOC_HEADERS
-    pulse.h mainwindow.h qcustomplot.hh)
+    pulse.h mainwindow.h qcustomplot.hh settings.hh settingsdialog.hh aboutdialog.hh)
 qt5_wrap_cpp(pulse_MOC_SOURCES ${pulse_MOC_HEADERS})
 set(pulse_HEADERS ${pulse_MOC_HEADERS})
 

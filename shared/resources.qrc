@@ -10,5 +10,7 @@
         <file>icons/soundoff.png</file>
         <file>icons/soundon.png</file>
         <file>sounds/beep1.wav</file>
+        <file>icons/about.png</file>
+        <file>about.html</file>
     </qresource>
 </RCC>

@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include "pulse.h"
 #include "qcustomplot.hh"
+#include "settings.hh"
 #include <QToolButton>
 #include <QSoundEffect>
 
@@ -13,7 +14,7 @@ class MainWindow : public QMainWindow
   Q_OBJECT
 
 public:
-  explicit MainWindow(Pulse &pulse, QWidget *parent = 0);
+  explicit MainWindow(Pulse &pulse, Settings &settings, QWidget *parent = 0);
 
 protected slots:
   void _onConnectionLoss();
@@ -22,9 +23,13 @@ protected slots:
   void _onLog(bool log);
   void _onSoundToggled(bool on);
   void _onSettings();
+  void _applySettings();
+  void _onAbout();
 
 protected:
   Pulse &_pulse;
+  Settings &_settings;
+
   QToolButton *_start;
   QToolButton *_log;
   QToolButton *_soundButton;
