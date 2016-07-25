@@ -1,3 +1,14 @@
 <RCC>
-    <qresource prefix="/"/>
+    <qresource prefix="/">
+        <file>icons/config.png</file>
+        <file>icons/log.png</file>
+        <file>icons/play.png</file>
+        <file>icons/pulse.png</file>
+        <file>icons/quit.png</file>
+        <file>icons/stop.png</file>
+        <file>icons/blood.png</file>
+        <file>icons/soundoff.png</file>
+        <file>icons/soundon.png</file>
+        <file>sounds/beep1.wav</file>
+    </qresource>
 </RCC>

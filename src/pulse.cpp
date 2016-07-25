@@ -5,12 +5,16 @@
 #include "../firmware/proto.h"      /* custom request numbers */
 #include "../firmware/usbconfig.h"  /* device's VID/PID and names */
 
-#define PERIOD  75
-#define THETA   (double(PERIOD)/1e3)
+#define PERIOD   75
+#define THETA    (float(PERIOD)/10e3)
+#define Fmin     (float(PERIOD*30)/60e3)
+#define Fmax     (float(PERIOD*180)/60e3)
 
 
 Pulse::Pulse(QObject *parent)
-  : QObject(parent), _usbctx(0), _device(0)
+  : QObject(parent), _usbctx(0), _device(0), _irDCFilter(LowPassKernel<firSize>(Fmin)),
+    _irACFilter(BandPassKernel<firSize>(Fmin, Fmax)), _redDCFilter(LowPassKernel<firSize>(Fmin)),
+    _redACFilter(BandPassKernel<firSize>(Fmin, Fmax))
 {
   // Init USB context
   libusb_init(&_usbctx);
@@ -34,6 +38,7 @@ Pulse::~Pulse() {
     libusb_exit(_usbctx);
   // done.
   _connected = false;
+  closeLog();
 }
 
 bool
@@ -57,6 +62,11 @@ Pulse::irMean() const {
 }
 
 double
+Pulse::irPulse() const {
+  return _irPulse;
+}
+
+double
 Pulse::irStd() const {
   return _irStd;
 }
@@ -72,6 +82,11 @@ Pulse::redMean() const {
 }
 
 double
+Pulse::redPulse() const {
+  return _redPulse;
+}
+
+double
 Pulse::redStd() const {
   return _redStd;
 }
@@ -82,26 +97,18 @@ Pulse::SpO2() const {
 }
 
 double
-Pulse::SpO2Mean() const {
-  return _SpO2Mean;
-}
-
-double
 Pulse::pulse() const {
-  return _pulse;
-}
-
-double
-Pulse::pulseMean() const {
   return _pulseMean;
 }
 
 void
 Pulse::start() {
-  _baseMean = _irMean = _redMean = 0;;
+  _t=0;
+  _irMean = _redMean = 0;
+  _irPulse = _redPulse = 0;
   _irStd = _redStd = 0;
-  _t = _pulseMean = _dIR = _dRed = 0;
-  _SpO2Mean = 90;
+
+  _pulseMean = 70;
 
   _startTime = QDateTime::currentDateTime();
   _timer.start();
@@ -161,25 +168,41 @@ Pulse::updateMeasurement() {
     _ir -= _base;
     _red -= _base;
 
-    // Detect pulse
-    bool isPulse = (_dIR > 0) && (_dRed > 0);
-    _dIR = _ir-_irMean; _dRed = _red-_redMean;
-    isPulse &= (_dIR < 0) && (_dRed < 0);
-    double f = 1./(_t - _lastPulse);
-    if (isPulse && (f<180)) {
-      _pulse = f;
-      _lastPulse = _t;
-    }
-    _pulseMean = (1.-THETA)*_pulseMean + THETA*_pulse;
+    // Detect pulse (last value was positive)
+    double lastIrPulse = _irPulse;
+    bool wasAboveA = (_irPulse > _irStd);
+    bool wasAboveB = (_irPulse > -_irStd);
 
-    _irStd  = (1.-THETA)*_irStd + THETA*std::abs(_ir-_irMean);
-    _irMean = (1.-THETA)*_irMean + THETA*_ir;
-    _redStd = (1.-THETA)*_redStd + THETA*std::abs(_red-_redMean);
-    _redMean = (1.-THETA)*_redMean + THETA*_red;
+    _irMean = _irDCFilter.apply(_ir);
+    _irPulse = _irACFilter.apply(_ir);
+    _irStd   = (1.-THETA)*_irStd + THETA*std::abs(_irPulse);
+
+    _redMean = _redDCFilter.apply(_red);
+    _redPulse = _redACFilter.apply(_red);
+    _redStd   = (1.-THETA)*_redStd + THETA*std::abs(_redPulse);
 
     double r = (_redStd*_irMean)/(_irStd*_redMean);
-    _SpO2 = 100*(-r/3 + 3.4/3);
-    _SpO2Mean = (1.-THETA)*_SpO2Mean + THETA*_SpO2;
+    if (r < 1)
+      _SpO2 = -25*r + 110;
+    else
+      _SpO2 = -33.333*r + 113.333;
+
+    // If last pulse was positive and current negative -> pulse event
+    bool isBelowA = (_irPulse <= _irStd);
+    bool isBelowB = (_irPulse <= -_irStd);
+    bool isFalling = ((lastIrPulse - _irPulse)>0);
+    _isFalling = (wasAboveA && isBelowA) || (_isFalling && isFalling);
+    bool isPulse = _isFalling && wasAboveB && isBelowB;
+    double f = 1./(_t - _lastPulse);
+    if (isPulse) {
+      _pulse = f;
+      _lastPulse = _t;
+      emit pulseEvent();
+    }
+    _pulseMean = (1.-THETA/2)*_pulseMean + THETA/2*_pulse;
+
+    if (_logFile.isOpen())
+      _logValues();
 
     emit measurement();
   }
@@ -219,4 +242,38 @@ Pulse::reconnect() {
   }
 
   return true;
+}
+
+
+bool
+Pulse::logTo(const QString &filename) {
+  if (_logFile.isOpen())
+    closeLog();
+  _logFile.setFileName(filename);
+  if (_logFile.open(QIODevice::WriteOnly)) {
+    _logFile.write("#PULSE\tSpO2\tIR_RAW\tIR_DC\tIR_AC\tIR_STD\tRED_RAW\tRED_DC\tRED_AC\tRED_STD\n");
+  }
+  return false;
+}
+
+void
+Pulse::closeLog() {
+  _logFile.close();
+}
+
+void
+Pulse::_logValues() {
+  if (! _logFile.isOpen())
+    return;
+
+  _logFile.write(QString::number(_pulseMean).toUtf8()); _logFile.write("\t");
+  _logFile.write(QString::number(_SpO2).toUtf8()); _logFile.write("\t");
+  _logFile.write(QString::number(_ir).toUtf8()); _logFile.write("\t");
+  _logFile.write(QString::number(_irMean).toUtf8()); _logFile.write("\t");
+  _logFile.write(QString::number(_irPulse).toUtf8()); _logFile.write("\t");
+  _logFile.write(QString::number(_irStd).toUtf8()); _logFile.write("\t");
+  _logFile.write(QString::number(_red).toUtf8()); _logFile.write("\t");
+  _logFile.write(QString::number(_redMean).toUtf8()); _logFile.write("\t");
+  _logFile.write(QString::number(_redPulse).toUtf8()); _logFile.write("\t");
+  _logFile.write(QString::number(_redStd).toUtf8()); _logFile.write("\n");
 }

@@ -1,90 +1,184 @@
 #include "mainwindow.h"
 #include <QVBoxLayout>
 #include <QMessageBox>
+#include <QFileDialog>
+#include <QToolButton>
+#include <QIcon>
 
-#define DURATION 2.0
+#define DURATION 5.0
 
 
 MainWindow::MainWindow(Pulse &pulse, QWidget *parent)
-  : QMainWindow(parent), _pulse(pulse), _plot(0)
+  : QMainWindow(parent), _pulse(pulse), _plot(0), _beep()
 {
-  setMinimumSize(800, 320);
+  //setWindowFlags(windowFlags() | Qt::CustomizeWindowHint | Qt::WindowStaysOnTopHint);
+  setMinimumSize(800, 480);
   setWindowTitle(tr("Pulse"));
+
+  QToolBar *toolbar = addToolBar(tr("Toolbar"));
+  _start = new QToolButton();
+  _start->setText(tr("Start"));
+  _start->setIcon(QIcon("://icons/play.png"));
+  _start->setCheckable(true);
+  _start->setChecked(false);
+  toolbar->addWidget(_start);
+
+  _log = new QToolButton();
+  _log->setText(tr("Log"));
+  _log->setIcon(QIcon("://icons/log.png"));
+  _log->setCheckable(true);
+  _log->setChecked(false);
+  toolbar->addWidget(_log);
+  toolbar->addSeparator();
+
+  _soundButton = new QToolButton();
+  _soundButton->setText(tr("Enable pulse beep"));
+  _soundButton->setIcon(QIcon("://icons/soundon.png"));
+  _soundButton->setCheckable(true);
+  _soundButton->setChecked(false);
+  toolbar->addWidget(_soundButton);
+
+  toolbar->addAction(QIcon("://icons/config.png"), tr("Settings"), this, SLOT(_onSettings()));
+
+  QWidget* empty = new QWidget();
+  empty->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  toolbar->addWidget(empty);
+  toolbar->addAction(QIcon("://icons/quit.png"), tr("Quit"), this, SLOT(close()));
 
   QColor color;
   _plot = new QCustomPlot(this);
   _plot->setInteraction(QCP::iRangeZoom, true);
   _plot->setInteraction(QCP::iRangeDrag, true);
-  _plot->yAxis->setRange(0,100);
-  _plot->xAxis->setRange(0,1);
+  _plot->yAxis->setRange(60,100);
+  _plot->yAxis2->setRange(40,150);
+  _plot->xAxis->setRange(1-DURATION,1);
   _plot->yAxis->setTickLabelColor(Qt::blue);
-  _plot->yAxis->setLabel("SpO2 [%]");
+  _plot->yAxis->setLabel(tr("SpO2 [%]"));
   _plot->yAxis2->setVisible(true);
   _plot->yAxis2->setTickLabelColor(Qt::red);
-  _plot->yAxis2->setLabel("Pulse [BPM]");
+  _plot->yAxis2->setLabel(tr("Pulse [BPM]"));
 
-  _relGraph = _plot->addGraph();
-  _relMeanGraph = _plot->addGraph();
-  color = Qt::blue; color.setAlpha(64);
-  _relGraph->setPen(color);
-  color.setAlpha(255);
-  _relMeanGraph->setPen(color);
+  _spo2Graph = _plot->addGraph();
+  _spo2Graph->setPen(QColor(Qt::blue));
 
   _pulseGraph = _plot->addGraph(0, _plot->yAxis2);
-  color = Qt::red; color.setAlpha(64);
-  _pulseGraph->setPen(color);
-  _pulseMeanGraph = _plot->addGraph(0, _plot->yAxis2);
-  color = Qt::red; color.setAlpha(255);
-  _pulseMeanGraph->setPen(color);
+  _pulseGraph->setPen(QColor(Qt::red));
 
-  setCentralWidget(_plot);
+  _pulsePlot = new QCustomPlot(this);
+  _pulsePlot->yAxis->setLabel(tr("Pulse signal"));
+  _pulsePlot->yAxis->setRange(-1, 1);
+  _pulsePlot->xAxis->setRange(0, 1);
+  _irPulseGraph = _pulsePlot->addGraph();
+  _irStdGraph   = _pulsePlot->addGraph();
+  color = Qt::blue;
+  _irPulseGraph->setPen(color);
+  color.setAlpha(64);
+  _irStdGraph->setPen(color);
+  _redPulseGraph = _pulsePlot->addGraph();
+  _redStdGraph   = _pulsePlot->addGraph();
+  color = Qt::red;
+  _redPulseGraph->setPen(color);
+  color.setAlpha(64);
+  _redStdGraph->setPen(color);
+
+  QWidget *panel = new QWidget();
+  QVBoxLayout *layout = new QVBoxLayout();
+  layout->addWidget(_plot, 2);
+  layout->addWidget(_pulsePlot, 1);
+  panel->setLayout(layout);
+  setCentralWidget(panel);
+
+  _beep.setSource(QUrl::fromLocalFile("://sounds/beep1.wav"));
+  _beep.setMuted(true);
 
   connect(&_pulse, SIGNAL(connectionLost()), this, SLOT(_onConnectionLoss()));
   connect(&_pulse, SIGNAL(measurement()), this, SLOT(_onUpdate()));
-
-  _pulse.start();
+  connect(_start, SIGNAL(toggled(bool)), this, SLOT(_onStart(bool)));
+  connect(_log, SIGNAL(toggled(bool)), this, SLOT(_onLog(bool)));
+  connect(_soundButton, SIGNAL(toggled(bool)), this, SLOT(_onSoundToggled(bool)));
+  connect(&_pulse, SIGNAL(pulseEvent()), &_beep, SLOT(play()));
 }
 
 void
 MainWindow::_onUpdate() {
   double t  = _pulse.t();
-  double pulse = _pulse.pulse();
-  double pulseMean = _pulse.pulseMean();
   double tMax = std::ceil(t);
-  double rel = _pulse.SpO2();
-  double relMean = _pulse.SpO2Mean();
 
-  _relGraph->addData(t, rel);
-  _relGraph->removeDataBefore(t-DURATION);
-  _relMeanGraph->addData(t, relMean);
-  _relMeanGraph->removeDataBefore(t-DURATION);
-  _relGraph->rescaleValueAxis(false, false);
-  _relMeanGraph->rescaleValueAxis(true, false);
-
-  _pulseGraph->addData(t, pulse);
+  _spo2Graph->addData(t, _pulse.SpO2());
+  _spo2Graph->removeDataBefore(t-DURATION);
+  _pulseGraph->addData(t, _pulse.pulse());
   _pulseGraph->removeDataBefore(t-DURATION);
-  _pulseMeanGraph->addData(t, pulseMean);
-  _pulseMeanGraph->removeDataBefore(t-DURATION);
-  _pulseGraph->rescaleValueAxis(false, false);
-  _pulseMeanGraph->rescaleValueAxis(true, false);
+
+  _irPulseGraph->addData(t, _pulse.irPulse());
+  _irPulseGraph->removeDataBefore(t-1);
+  _irPulseGraph->rescaleValueAxis(false,false);
+  _irStdGraph->addData(t, _pulse.irStd());
+  _irStdGraph->removeDataBefore(t-1);
+  _irStdGraph->rescaleValueAxis(true,false);
+  _redPulseGraph->addData(t, _pulse.redPulse());
+  _redPulseGraph->removeDataBefore(t-1);
+  _redPulseGraph->rescaleValueAxis(true,false);
+  _redStdGraph->addData(t, _pulse.redStd());
+  _redStdGraph->removeDataBefore(t-1);
+  _redStdGraph->rescaleValueAxis(true,false);
 
   _plot->xAxis->setRange(tMax-DURATION, tMax);
+  _pulsePlot->xAxis->setRange(tMax-1, tMax);
   _plot->replot();
+  _pulsePlot->replot();
 }
 
 void
 MainWindow::_onConnectionLoss() {
+  if (_start->isChecked())
+    _start->toggle();
   // Ask user for reconnect
-  QMessageBox::StandardButton res = QMessageBox::Retry;
   while (QMessageBox::Retry == QMessageBox::question(
            this, tr("Connection lost"), tr("Connection to the device lost. Try reconnect?"),
            QMessageBox::Retry, QMessageBox::Abort) ) {
     // Try to reconnect
     if (_pulse.reconnect()) {
-      _pulse.start();
       return;
     }
   }
-  // Quit
-  this->close();
+}
+
+void
+MainWindow::_onStart(bool start) {
+  if (start) {
+    _pulse.start();
+    _start->setText(tr("Stop"));
+    _start->setIcon(QIcon("://icons/stop.png"));
+  } else {
+    _pulse.stop();
+    _start->setText(tr("Start"));
+    _start->setIcon(QIcon("://icons/play.png"));
+  }
+}
+
+void
+MainWindow::_onLog(bool log) {
+  if (log) {
+    QString filename = QFileDialog::getSaveFileName(
+          this, tr("Log to"), "", tr("*.csv *.txt (Comma separated values)"));
+    if (filename.isEmpty()) {
+      _log->setChecked(false);
+      return;
+    }
+    _pulse.logTo(filename);
+  } else {
+    _pulse.closeLog();
+  }
+}
+
+void
+MainWindow::_onSoundToggled(bool on) {
+  _beep.setMuted(! on);
+  if (on)
+    _beep.play();
+}
+
+void
+MainWindow::_onSettings() {
+  // pass...
 }
