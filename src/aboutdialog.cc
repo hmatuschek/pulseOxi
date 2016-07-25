@@ -14,6 +14,8 @@ AboutDialog::AboutDialog(QWidget *parent)
   text->setWordWrap(true);
   text->setText(about.readAll());
   text->setMaximumWidth(300);
+  text->setTextInteractionFlags(Qt::TextBrowserInteraction);
+  text->setOpenExternalLinks(true);
 
   QDialogButtonBox *bb = new QDialogButtonBox(QDialogButtonBox::Close);
 

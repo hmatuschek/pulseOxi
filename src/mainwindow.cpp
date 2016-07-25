@@ -192,6 +192,13 @@ MainWindow::_onStart(bool start) {
     _pulse.stop();
     _start->setText(tr("Start"));
     _start->setIcon(QIcon("://icons/play.png"));
+    // Reset plots
+    _spo2Graph->clearData();
+    _pulseGraph->clearData();
+    _irPulseGraph->clearData();
+    _irStdGraph->clearData();
+    _redPulseGraph->clearData();
+    _redStdGraph->clearData();
   }
 }
 

@@ -1,12 +1,13 @@
 #include "pulse.h"
 #include <qDebug>
 #include <cmath>
+#include <QtEndian>
 
 #include "../firmware/proto.h"      /* custom request numbers */
 #include "../firmware/usbconfig.h"  /* device's VID/PID and names */
 
 #define PERIOD   75
-#define THETA    (float(PERIOD)/10e3)
+#define THETA    (float(PERIOD)/5e3)
 #define Fmin     (float(PERIOD*30)/60e3)
 #define Fmax     (float(PERIOD*180)/60e3)
 
@@ -152,9 +153,9 @@ Pulse::readMeasurement(double &base, double &ir, double &red) {
     qDebug() << "Got invalid or incomplete response.";
     return false;
   }
-  base = (0xffff-double(msg.base))/0xffff;
-  ir   = (0xffff-double(msg.upper))/0xffff;
-  red  = (0xffff-double(msg.lower))/0xffff;
+  base = (0xffff-double(qFromLittleEndian(msg.base)))/0xffff;
+  ir   = (0xffff-double(qFromLittleEndian(msg.upper)))/0xffff;
+  red  = (0xffff-double(qFromLittleEndian(msg.lower)))/0xffff;
   return true;
 }
 
@@ -170,8 +171,8 @@ Pulse::updateMeasurement() {
 
     // Detect pulse (last value was positive)
     double lastIrPulse = _irPulse;
-    bool wasAboveA = (_irPulse > _irStd);
-    bool wasAboveB = (_irPulse > -_irStd);
+    bool wasAboveA = (_irPulse > _irStd/2);
+    bool wasAboveB = (_irPulse > -_irStd/2);
 
     _irMean = _irDCFilter.apply(_ir);
     _irPulse = _irACFilter.apply(_ir);
@@ -185,11 +186,11 @@ Pulse::updateMeasurement() {
     if (r < 1)
       _SpO2 = -25*r + 110;
     else
-      _SpO2 = -33.333*r + 113.333;
+      _SpO2 = -35.4167*r + 120.4167;
 
     // If last pulse was positive and current negative -> pulse event
-    bool isBelowA = (_irPulse <= _irStd);
-    bool isBelowB = (_irPulse <= -_irStd);
+    bool isBelowA = (_irPulse <= _irStd/2);
+    bool isBelowB = (_irPulse <= -_irStd/2);
     bool isFalling = ((lastIrPulse - _irPulse)>0);
     _isFalling = (wasAboveA && isBelowA) || (_isFalling && isFalling);
     bool isPulse = _isFalling && wasAboveB && isBelowB;
