@@ -9,7 +9,9 @@ The amount of light that gets detected, however, depends on many factors, includ
 
 For the [circuit](https://github.com/hmatuschek/pulseOxi/blob/master/hardware/pulse_scm.pdf), two LEDs are used as light sources. One red led (around 645nm) and one infra red (IR, 900nm) led. The intensity of the transmitted light is then measured using a photo diode. The current through this diode is then converted to a voltage using a operational amplifier (opamp). The voltage signal is then sampled using one of the analog/digital converters (ADCs) of the ATtiny45. By switching the LEDs on and off (also controlled by the ATtiny), the intensity difference can be computed, representing the relative oxidation level of the hemoglobin. For more details on how to construct a pulse-oximeter, consider the [AN4327 application node](http://www.nxp.com/files/32bit/doc/app_note/AN4327.pdf) by NXP. 
 
-Please note that the LEDs are driven directly by the digital outputs of the ATtiny. They are able to deliver (only) about 20-30mA. Hence choose the LEDs and their series resistors accordingly. The circuit above does not include the series resistors. They are connected directly to the LEDs at the clip.
+Please note that the LEDs are driven directly by the digital outputs of the ATtiny. They are able to deliver (only) about 20-30mA. Hence choose the LEDs and their series resistors accordingly. The circuit above does not include the series resistors. They are connected directly to the LEDs at the clip. The single LEDs are driven by ATtiny in a H-bridge way. That is, one of the LED pins acts as a source and one as a sink. This allows to drive the LEDs with two wires only but does not allow for driving them both simultaneously. Hence the LEDs must be connected to the ATtiny like shown in the circuit below.
+
+<img src="https://github.com/hmatuschek/pulseOxi/blob/master/hardware/LEDs_scm.png">
 
 
 ## The client software
