@@ -11,7 +11,7 @@ For the [circuit](https://github.com/hmatuschek/pulseOxi/blob/master/hardware/pu
 
 Please note that the LEDs are driven directly by the digital outputs of the ATtiny. They are able to deliver (only) about 20-30mA. Hence choose the LEDs and their series resistors accordingly. The circuit above does not include the series resistors. They are connected directly to the LEDs at the clip. The single LEDs are driven by ATtiny in a H-bridge way. That is, one of the LED pins acts as a source and one as a sink. This allows to drive the LEDs with two wires only but does not allow for driving them both simultaneously. Hence the LEDs must be connected to the ATtiny like shown in the circuit below.
 
-<img align="center" src="https://github.com/hmatuschek/pulseOxi/blob/master/hardware/LEDs_scm.png" width="320">
+<img align="middle" src="https://github.com/hmatuschek/pulseOxi/blob/master/hardware/LEDs_scm.png" width="320"/>
 
 
 ## The client software
