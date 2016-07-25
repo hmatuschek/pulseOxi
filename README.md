@@ -13,7 +13,10 @@ Please note that the LEDs are driven directly by the digital outputs of the ATti
 ## The client software
 
 The client software provides a convenient [Qt5](https://qt.io) GUI application using [QCustomPlot](http://www.qcustomplot.com/) for potting and [libusb](http://libusb.info/) to interface the pulse oximeter hardware.
- 
+
+
+The upper half shows the (approx.) SpO2 level (relative oxygen saturation, blue line) together with an estimate of the pulse rate in BPM (red line). The smaller bottom plot shows the pulse signal obtained for the IR channel (blue line) and red channel (red line) from which the pulse rate gets estimated. With the current implementation, the baseline and AC signal (deviance from the baseline) as well as the amplitude of the AC signal are obtained using sinc-convolution filters. This implies a short delay (about 5s) between the actual measurement and the display.
+
  
 ## Features
 
