@@ -5,16 +5,12 @@ An pulse oximeter is a relatively simple device. It uses the property of hemoglo
 
 ## The hardware
 
-(put schematic here)
-
-For this circuit, two LEDs are used as light sources. One red led (around 645nm) and one infra red (IR, 900nm) led. The intensity of the transmitted light is then measured using a photo diode. The current through this diode is then converted to a voltage using a operational amplifier (opamp). The voltage signal is then sampled using one of the analog/digital converters (ADCs) of the ATtiny45. By switching the LEDs on and off (also controlled by the ATtiny), the intensity difference can be computed, representing the relative oxidation level of the hemoglobin. For more details on how to construct a pulse-oximeter, consider the [AN4327 application node](http://www.nxp.com/files/32bit/doc/app_note/AN4327.pdf) by NXP. 
+For the [circuit](https://github.com/hmatuschek/pulseOxi/blob/master/hardware/pulse_scm.pdf), two LEDs are used as light sources. One red led (around 645nm) and one infra red (IR, 900nm) led. The intensity of the transmitted light is then measured using a photo diode. The current through this diode is then converted to a voltage using a operational amplifier (opamp). The voltage signal is then sampled using one of the analog/digital converters (ADCs) of the ATtiny45. By switching the LEDs on and off (also controlled by the ATtiny), the intensity difference can be computed, representing the relative oxidation level of the hemoglobin. For more details on how to construct a pulse-oximeter, consider the [AN4327 application node](http://www.nxp.com/files/32bit/doc/app_note/AN4327.pdf) by NXP. 
 
 Please note that the LEDs are driven directly by the digital outputs of the ATtiny. They are able to deliver (only) about 20-30mA. Hence choose the LEDs and their series resistors accordingly. The circuit above does not include the series resistors. They are connected directly to the LEDs at the clip.
 
 
 ## The client software
-
-(Put screen shot here)
 
 The client software provides a convenient [Qt5](https://qt.io) GUI application using [QCustomPlot](http://www.qcustomplot.com/) for potting and [libusb](http://libusb.info/) to interface the pulse oximeter hardware.
  
