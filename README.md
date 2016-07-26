@@ -2,7 +2,7 @@
 
 An pulse oximeter is a relatively simple device. It uses the property of hemoglobin to change its absorption spectrum around 660nm (red) and to some lesser degree around 940nm (infrared) when saturated with oxygen. This change in the absorption spectrum can therefore be measured indirectly by measuring the amount (intensity, brightness) of red and infrared light being transmitted through or back-scattered from e.g. a finger. 
 
-The absolute amount of light that gets detected, however, depends on many factors, including the sensitivity of the detector (photo diode), the light source (LEDs), how the detector and sources are fixated on the skin and, of course, on physiognomic properties of the finger. These dependencies turn the measurement with a single light source virtually impossible. Many of these influences, however, affect light of all wavelengths. Hence it is possible to reduce these influences on the measurement by measuring the brightness of light of more than one wavelength. The oxidation of hemoglobin changes its absobtion at different wavelengths differently, hence using two light sources with different wavelengths allows to cancel out the influences which are wavelength insensitive. This "trick" then allows to measure the oxidation of the hemoglobin by measuring the change in the difference of the intensities at these two wavelengths. 
+The absolute amount of light that gets detected, however, depends on many factors, including the sensitivity of the detector (photo diode), the light source (LEDs), how the detector and sources are fixated on the skin and, of course, on physiognomic properties of the finger. These dependencies turn the measurement with a single light source virtually impossible. Many of these influences, however, affect light of all wavelengths. Hence it is possible to reduce these influences on the measurement by measuring the brightness of light of more than one wavelength. The oxidation of hemoglobin changes its absorption at different wavelengths differently, hence using two light sources with different wavelengths allows to cancel out the influences which are wavelength insensitive. This "trick" then allows to measure the oxidation of the hemoglobin by measuring the change in the difference of the intensities at these two wavelengths. 
 
 
 ## The hardware
@@ -11,11 +11,18 @@ For the [circuit](https://github.com/hmatuschek/pulseOxi/blob/master/hardware/pu
 
 <img align="middle" src="https://github.com/hmatuschek/pulseOxi/blob/master/hardware/pulse_scm.png" width="90%">
 
-This circuit is very reduced. It was designed as a "USB stick" without using SMD parts. Hence many parts usually enhancing the circuits stability and reliability have been obmitted.
+This circuit is very reduced. It was designed as a "USB stick" without using SMD parts. Hence many parts usually enhancing the circuits stability and reliability have been omitted that should be added when a larger form factor is chosen anyway. For example, I omitted: 
 
-Please note that the LEDs are driven directly by the digital outputs of the ATtiny. They are able to deliver (only) about 20-30mA. Hence choose the LEDs and their series resistors accordingly. The circuit above does not include the series resistors. They are connected directly to the LEDs at the clip. The single LEDs are driven by ATtiny in a H-bridge way. That is, one of the LED pins acts as a source and one as a sink. This allows to drive the LEDs with two wires only but does not allow for driving them both simultaneously. Hence the LEDs must be connected to the ATtiny like shown in the circuit below.
+  * LED driver circuits,
+  * A proper blocking pi-network or even a larger blocking capacitor to stabilize the supply voltage, 
+  * A small capacitor in parallel to the feed-back resistor of the transimpedance amplifier,
+  * A proper reference voltage for the transimpedance amplifier.
+
+Given the simplicity of the circuit, the results are surprisingly good. 
 
 <img align="middle" src="https://github.com/hmatuschek/pulseOxi/blob/master/hardware/LEDs_scm.png" width="320">
+
+Please note that the LEDs are driven directly by the digital outputs of the ATtiny. They are able to deliver (only) about 20-30mA. Hence choose the LEDs and their series resistors accordingly. The circuit above does not include the series resistors. They are connected directly to the LEDs at the clip. The single LEDs are driven by ATtiny in a H-bridge way. That is, one of the LED pins acts as a source and one as a sink. This allows to drive the LEDs with two wires only but does not allow for driving them both simultaneously. Hence the LEDs must be connected to the ATtiny like shown in the circuit below.
 
 
 ## The client software
