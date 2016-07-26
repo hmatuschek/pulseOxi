@@ -9,6 +9,7 @@ class QLineEdit;
 class QCheckBox;
 class QSlider;
 
+/** Simple dialog to edit the settings. */
 class SettingsDialog: public QDialog
 {
   Q_OBJECT
@@ -34,6 +35,7 @@ protected:
   QCheckBox *_pulseBeepEnabled;
   QSlider   *_pulseBeepVolume;
   QSoundEffect _beep;
+  QCheckBox *_swapChannels;
 };
 
 #endif // SETTINGSDIALOG_HH

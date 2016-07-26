@@ -6,24 +6,31 @@
 #include "../firmware/proto.h"      /* custom request numbers */
 #include "../firmware/usbconfig.h"  /* device's VID/PID and names */
 
-#define PERIOD   75
-#define THETA    (float(PERIOD)/10e3)
-#define Fmin     (float(PERIOD*30)/60e3)
-#define Fmax     (float(PERIOD*180)/60e3)
+/// Time constant of the moving average filters in 1/sample (tau = 10s)
+#define THETA (float(PERIOD)/10e3)
+/// Lower cut-off frequency in 1/sample (== 15/min)
+#define Fmin  (float(PERIOD*15)/60e3)
+/// Upper cut-off frequency in 1/sample (== 180/min)
+#define Fmax  (float(PERIOD*180)/60e3)
 
 
-Pulse::Pulse(QObject *parent)
+
+Pulse::Pulse(bool swapChannels, QObject *parent)
   : QObject(parent), _usbctx(0), _device(0), _irDCFilter(LowPassKernel<firSize>(Fmin)),
-    _irACFilter(BandPassKernel<firSize>(Fmin, Fmax)), _redDCFilter(LowPassKernel<firSize>(Fmin)),
-    _redACFilter(BandPassKernel<firSize>(Fmin, Fmax))
+    _irACFilter(BandPassKernel<firSize>(2*Fmin, Fmax)), _redDCFilter(LowPassKernel<firSize>(Fmin)),
+    _redACFilter(BandPassKernel<firSize>(2*Fmin, Fmax)), _swapChannels(swapChannels)
 {
-  // Init USB context
-  libusb_init(&_usbctx);
-  _connected = reconnect();
-
   _timer.setInterval(PERIOD);
   _timer.setSingleShot(false);
   connect(&_timer, SIGNAL(timeout()), this, SLOT(updateMeasurement()));
+
+  // Init USB context
+  if (0 > libusb_init(&_usbctx)) {
+    qDebug() << "Cannot initialize USB context.";
+    return;
+  }
+
+  _connected = reconnect();
 }
 
 
@@ -153,6 +160,10 @@ Pulse::readMeasurement(double &base, double &ir, double &red) {
     qDebug() << "Got invalid or incomplete response.";
     return false;
   }
+
+  if (_swapChannels)
+    std::swap(msg.upper, msg.lower);
+
   base = (0xffff-double(qFromLittleEndian(msg.base)))/0xffff;
   ir   = (0xffff-double(qFromLittleEndian(msg.upper)))/0xffff;
   red  = (0xffff-double(qFromLittleEndian(msg.lower)))/0xffff;
@@ -182,6 +193,7 @@ Pulse::updateMeasurement() {
     _redPulse = _redACFilter.apply(_red);
     _redStd   = (1.-THETA)*_redStd + THETA*std::abs(_redPulse);
 
+    // Taken from NXP AN4327
     double r = (_redStd*_irMean)/(_irStd*_redMean);
     if (r < 1)
       _SpO2 = -25*r + 110;
@@ -200,7 +212,7 @@ Pulse::updateMeasurement() {
       _lastPulse = _t;
       emit pulseEvent();
     }
-    _pulseMean = (1.-THETA/2)*_pulseMean + THETA/2*_pulse;
+    _pulseMean = (1.-THETA)*_pulseMean + THETA*_pulse;
 
     if (_logFile.isOpen())
       _logValues();
@@ -218,9 +230,8 @@ bool
 Pulse::reconnect() {
   /* compute VID/PID from usbconfig.h so that there is a central source of information */
   const uint8_t rawVid[2] = {USB_CFG_VENDOR_ID}, rawPid[2] = {USB_CFG_DEVICE_ID};
-  int           vid, pid;
-  vid = int(rawVid[1]) * 256 + rawVid[0];
-  pid = int(rawPid[1]) * 256 + rawPid[0];
+  int vid = int(rawVid[1]) * 256 + rawVid[0],
+      pid = int(rawPid[1]) * 256 + rawPid[0];
 
   // Get device list (is this needed to discover the device?)
   libusb_device **devices;
@@ -277,4 +288,9 @@ Pulse::_logValues() {
   _logFile.write(QString::number(_redMean).toUtf8()); _logFile.write("\t");
   _logFile.write(QString::number(_redPulse).toUtf8()); _logFile.write("\t");
   _logFile.write(QString::number(_redStd).toUtf8()); _logFile.write("\n");
+}
+
+void
+Pulse::setSwapChannels(bool swap) {
+  _swapChannels = swap;
 }

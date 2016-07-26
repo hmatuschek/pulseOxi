@@ -11,7 +11,7 @@ For the [circuit](https://github.com/hmatuschek/pulseOxi/blob/master/hardware/pu
 
 <img align="middle" src="https://github.com/hmatuschek/pulseOxi/blob/master/hardware/pulse_scm.png" width="90%">
 
-This circuit is very reduced. It was designed as a "USB stick" without using SMD parts. Hence many parts usually enhancing the circuits stability and reliability have been omitted that should be added when a larger form factor is chosen anyway. For example, I omitted: 
+This circuit is very reduced. It was designed as a USB dongle without using SMD parts. Hence many parts usually enhancing the circuit stability and reliability have been omitted and should be added when a larger form factor is chosen. For example, I omitted:
 
   * LED driver circuits,
   * A proper blocking pi-network or even a larger blocking capacitor to stabilize the supply voltage, 
@@ -22,7 +22,7 @@ Given the simplicity of the circuit, the results are surprisingly good.
 
 <img align="middle" src="https://github.com/hmatuschek/pulseOxi/blob/master/hardware/LEDs_scm.png" width="320">
 
-Please note that the LEDs are driven directly by the digital outputs of the ATtiny. They are able to deliver (only) about 20-30mA. Hence choose the LEDs and their series resistors accordingly. The circuit above does not include the series resistors. They are connected directly to the LEDs at the clip. The single LEDs are driven by ATtiny in a H-bridge way. That is, one of the LED pins acts as a source and one as a sink. This allows to drive the LEDs with two wires only but does not allow for driving them both simultaneously. Hence the LEDs must be connected to the ATtiny like shown in the circuit below.
+Please note that the LEDs are driven directly by the digital outputs of the ATtiny. They are able to deliver (only) about 20-30mA. Hence choose the LEDs and their series resistors accordingly. The circuit above does not include the series resistors. They are connected directly to the LEDs at the clip. The single LEDs are driven by ATtiny in a H-bridge way. That is, one of the LED pins acts as a source and one as a sink. This allows to drive the LEDs with two wires only but does not allow for driving them both simultaneously. Hence the LEDs must be connected to the ATtiny like shown in the circuit above.
 
 
 ## The client software

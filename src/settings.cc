@@ -15,6 +15,7 @@ Settings::Settings(QObject *parent)
   _pulsePlotDuration = value("pulsePlotDuration", 1.).toDouble();
   _pulseBeepEnabled = value("pulseBeepEnabled", false).toBool();
   _pulseBeepVolume = value("pulseBeepVolume", 1.0).toDouble();
+  _swapChannels = value("swapChannels", false).toBool();
 }
 
 
@@ -117,3 +118,12 @@ Settings::setPulseBeepVolume(double value) {
   setValue("pulseBeepVolume", _pulseBeepVolume);
 }
 
+bool
+Settings::swapChannels() const {
+  return _swapChannels;
+}
+
+void
+Settings::setSwapChannels(bool swap) {
+  _swapChannels = swap;
+}

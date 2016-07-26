@@ -8,8 +8,8 @@ int main(int argc, char *argv[])
 {
   QApplication app(argc, argv);
 
-  Pulse pulse(0);
   Settings settings;
+  Pulse pulse(settings.swapChannels());
 
   MainWindow mainwin(pulse, settings);
   mainwin.show();

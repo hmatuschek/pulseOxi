@@ -58,29 +58,25 @@ SettingsDialog::SettingsDialog(Settings &settings)
   _pulseBeepVolume->setMaximum(100);
   _pulseBeepVolume->setValue(100*_settings.pulseBeepVolume());
 
+  _swapChannels = new QCheckBox();
+  _swapChannels->setChecked(_settings.swapChannels());
+
   QDialogButtonBox *bb = new QDialogButtonBox(QDialogButtonBox::Cancel | QDialogButtonBox::Ok);
 
-  QFormLayout *form1 = new QFormLayout();
-  form1->addRow(tr("Pulse/SpO2 time window"), _plotDuration);
-  form1->addRow(tr("min. SpO2 value"), _minSpO2);
-  form1->addRow(tr("max. SpO2 value"), _maxSpO2);
-  form1->addRow(tr("min. Pulse value"), _minPulse);
-  form1->addRow(tr("max. Pulse value"), _maxPulse);
-
-  QFormLayout *form2 = new QFormLayout();
-  form2->addRow(tr("Pulse signal plot visible"), _pulsePlotVisible);
-  form2->addRow(tr("Pulse signal time window"), _pulsePlotDuration);
-
-  QFormLayout *form3 = new QFormLayout();
-  form2->addRow(tr("Pulse beep enabled"), _pulseBeepEnabled);
-  form2->addRow(tr("Pulse beep volume"), _pulseBeepVolume);
+  QFormLayout *form = new QFormLayout();
+  form->addRow(tr("Pulse/SpO2 time window"), _plotDuration);
+  form->addRow(tr("min. SpO2 value"), _minSpO2);
+  form->addRow(tr("max. SpO2 value"), _maxSpO2);
+  form->addRow(tr("min. Pulse value"), _minPulse);
+  form->addRow(tr("max. Pulse value"), _maxPulse);
+  form->addRow(tr("Pulse signal plot visible"), _pulsePlotVisible);
+  form->addRow(tr("Pulse signal time window"), _pulsePlotDuration);
+  form->addRow(tr("Pulse beep enabled"), _pulseBeepEnabled);
+  form->addRow(tr("Pulse beep volume"), _pulseBeepVolume);
+  form->addRow(tr("Swap channels"), _swapChannels);
 
   QVBoxLayout *layout = new QVBoxLayout();
-  layout->addLayout(form1);
-  layout->addSpacing(5);
-  layout->addLayout(form2);
-  layout->addSpacing(5);
-  layout->addLayout(form3);
+  layout->addLayout(form);
   layout->addWidget(bb);
 
   setLayout(layout);
@@ -103,6 +99,7 @@ SettingsDialog::apply() {
   _settings.setPulsePlotDuration(_pulsePlotDuration->text().toDouble());
   _settings.setPulseBeepEnabled(_pulseBeepEnabled->isChecked());
   _settings.setPulseBeepVolume(double(_pulseBeepVolume->value())/100);
+  _settings.setSwapChannels(_swapChannels->isChecked());
   accept();
 }
 
