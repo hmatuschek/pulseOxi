@@ -35,6 +35,8 @@ add_definitions("-DDEBUG_LEVEL=0")
 SET(ASM_OPTIONS "-x assembler-with-cpp")
 SET(CMAKE_ASM_FLAGS "${CFLAGS} ${ASM_OPTIONS}" )
 
+INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/firmware")
+
 ##########################################################################
 # Firmware source
 ##########################################################################

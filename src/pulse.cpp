@@ -7,7 +7,7 @@
 #include "../firmware/usbconfig.h"  /* device's VID/PID and names */
 
 #define PERIOD   75
-#define THETA    (float(PERIOD)/5e3)
+#define THETA    (float(PERIOD)/10e3)
 #define Fmin     (float(PERIOD*30)/60e3)
 #define Fmax     (float(PERIOD*180)/60e3)
 
